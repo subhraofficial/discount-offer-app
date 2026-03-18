@@ -2,7 +2,7 @@ const form = document.getElementById("discountForm");
 const shareBtn = document.getElementById("shareBtn");
 const messageBox = document.getElementById("messageBox");
 
-const API_BASE_URL = "http://localhost:8081";
+const API_BASE_URL = "https://discount-offer-app.onrender.com";
 
 window.addEventListener("DOMContentLoaded", () => {
     const alreadySubmitted = localStorage.getItem("formSubmitted");
