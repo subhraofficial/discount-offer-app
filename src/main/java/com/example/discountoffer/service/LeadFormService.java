@@ -67,16 +67,19 @@ public class LeadFormService {
 
         CouponOffer selectedCoupon = getRandomCouponOffer();
 
-        Integer discount;
-        String couponCode;
 
-        if (selectedCoupon != null) {
-            discount = selectedCoupon.getDiscountPercentage();
-            couponCode = selectedCoupon.getCouponCode();
-        } else {
-            discount = generateDiscount();
-            couponCode = generateCouponCode(discount);
+        if (selectedCoupon == null) {
+            return new FormResponseDto(
+                    "NO_COUPON_AVAILABLE",
+                    null,
+                    null,
+                    null,
+                    "No offers available right now. Please try again later."
+            );
         }
+
+        Integer discount = selectedCoupon.getDiscountPercentage();
+        String couponCode = selectedCoupon.getCouponCode();
 
         leadForm.setDiscountPercentage(discount);
         leadForm.setCouponCode(couponCode);
