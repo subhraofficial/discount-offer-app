@@ -52,16 +52,28 @@ public class LeadFormService {
         leadForm.setCreatedAt(LocalDateTime.now());
 
         if ("PURCHASED".equalsIgnoreCase(request.getPurchaseStatus())) {
-            leadForm.setDiscountPercentage(null);
-            leadForm.setCouponCode(null);
+            CouponOffer selectedCoupon = getRandomCouponOffer();
+
+            if (selectedCoupon == null) {
+                return new FormResponseDto(
+                        "PURCHASED",
+                        0,
+                        "FRIEND50",
+                        "/thank-you",
+                        "If you already purchase, you can share this code to your friend"
+                );
+            }
+
+            leadForm.setDiscountPercentage(selectedCoupon.getDiscountPercentage());
+            leadForm.setCouponCode(selectedCoupon.getCouponCode());
             leadFormRepository.save(leadForm);
 
             return new FormResponseDto(
                     "PURCHASED",
-                    null,
-                    null,
+                    selectedCoupon.getDiscountPercentage(),
+                    selectedCoupon.getCouponCode(),
                     "/thank-you",
-                    "Purchase already completed."
+                    "If you already purchase, you can share this code to your friend"
             );
         }
 
