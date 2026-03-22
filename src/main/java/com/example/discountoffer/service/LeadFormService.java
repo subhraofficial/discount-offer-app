@@ -8,10 +8,17 @@ import com.example.discountoffer.entity.CouponOffer;
 import com.example.discountoffer.entity.LeadForm;
 import com.example.discountoffer.repository.CouponOfferRepository;
 import com.example.discountoffer.repository.LeadFormRepository;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.io.Reader;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -79,7 +86,6 @@ public class LeadFormService {
 
         CouponOffer selectedCoupon = getRandomCouponOffer();
 
-
         if (selectedCoupon == null) {
             return new FormResponseDto(
                     "NO_COUPON_AVAILABLE",
@@ -104,6 +110,75 @@ public class LeadFormService {
                 "/offer-page",
                 "Congratulations! Your discount code has been generated."
         );
+    }
+
+    public String uploadCouponCsv(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return "CSV file is empty.";
+        }
+
+        int savedCount = 0;
+        int skippedCount = 0;
+
+        try (
+                Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream()));
+                CSVParser csvParser = new CSVParser(
+                        reader,
+                        CSVFormat.DEFAULT.builder()
+                                .setHeader()
+                                .setSkipHeaderRecord(true)
+                                .setTrim(true)
+                                .build()
+                )
+        ) {
+            for (CSVRecord record : csvParser) {
+                String rawCouponCode = record.get("coupon_code");
+
+                if (rawCouponCode == null || rawCouponCode.isBlank()) {
+                    skippedCount++;
+                    continue;
+                }
+
+                String couponCode = rawCouponCode.trim().toUpperCase();
+
+                Integer discount = extractDiscountFromCoupon(couponCode);
+                if (discount == null) {
+                    skippedCount++;
+                    continue;
+                }
+
+                if (couponOfferRepository.findByCouponCodeIgnoreCase(couponCode).isPresent()) {
+                    skippedCount++;
+                    continue;
+                }
+
+                CouponOffer couponOffer = new CouponOffer();
+                couponOffer.setCouponCode(couponCode);
+                couponOffer.setDiscountPercentage(discount);
+
+                couponOfferRepository.save(couponOffer);
+                savedCount++;
+            }
+
+            return savedCount + " coupon(s) uploaded successfully. " + skippedCount + " skipped.";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Failed to upload CSV file.";
+        }
+    }
+
+    private Integer extractDiscountFromCoupon(String couponCode) {
+        String numberPart = couponCode.replaceAll("\\D+", "");
+
+        if (numberPart.isBlank()) {
+            return null;
+        }
+
+        try {
+            return Integer.parseInt(numberPart);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     public List<LeadFormResponseDto> getAllForms() {
@@ -165,7 +240,7 @@ public class LeadFormService {
     public CouponOfferDto saveCouponOffer(CouponOfferDto dto) {
         CouponOffer couponOffer = new CouponOffer();
         couponOffer.setDiscountPercentage(dto.getDiscountPercentage());
-        couponOffer.setCouponCode(dto.getCouponCode());
+        couponOffer.setCouponCode(dto.getCouponCode().trim().toUpperCase());
 
         CouponOffer saved = couponOfferRepository.save(couponOffer);
 
@@ -195,7 +270,7 @@ public class LeadFormService {
                 .orElseThrow(() -> new RuntimeException("Coupon offer not found"));
 
         couponOffer.setDiscountPercentage(dto.getDiscountPercentage());
-        couponOffer.setCouponCode(dto.getCouponCode());
+        couponOffer.setCouponCode(dto.getCouponCode().trim().toUpperCase());
 
         CouponOffer updated = couponOfferRepository.save(couponOffer);
 
@@ -243,15 +318,5 @@ public class LeadFormService {
             return "";
         }
         return "\"" + value.replace("\"", "\"\"") + "\"";
-    }
-
-    private int generateDiscount() {
-        return random.nextInt(20) + 51;
-    }
-
-    private String generateCouponCode(int discount) {
-        String[] prefixes = {"SAVE", "OFFER", "DEAL"};
-        String prefix = prefixes[random.nextInt(prefixes.length)];
-        return prefix + discount;
     }
 }
