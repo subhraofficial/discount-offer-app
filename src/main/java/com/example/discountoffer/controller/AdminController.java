@@ -23,7 +23,7 @@ public class AdminController {
     private LeadFormService leadFormService;
 
     private static final String ADMIN_USERNAME = "admin";
-    private static final String ADMIN_PASSWORD = "123456";
+    private static final String ADMIN_PASSWORD = "82749";
 
     @PostMapping("/login")
     public AdminLoginResponseDto login(@RequestBody AdminLoginRequestDto request) {
